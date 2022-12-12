@@ -342,6 +342,7 @@ FLOWS = {
         "roku",
         "roomba",
         "roon",
+        "roth",
         "rpi_power",
         "rtsp_to_webrtc",
         "ruckus_unleashed",
