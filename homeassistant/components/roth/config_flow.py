@@ -7,11 +7,11 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
+from .roth_user import User
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,17 +22,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("password"): str,
     }
 )
-
-
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input from the configuration flow for roth touchline sl."""
-
-    data["host"] = "https://emodul.eu/api/v1/authentication"
-
-    assert len(data["username"]) >= 6, "Username must be min. 6 characters"
-    assert len(data["password"]) >= 8, "Password must be min. 6 characters"
-
-    return data["title"]
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -52,7 +41,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            user = User(user_input["username"], user_input["password"])
+            await user.authenticate()
+            print(user.token)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -61,7 +52,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            return self.async_create_entry(title=info["title"], data=user_input)
+            return self.async_create_entry(title=user.username, data=user_input)
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
